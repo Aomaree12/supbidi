@@ -1,0 +1,715 @@
+<!doctype html>
+<html lang="th" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบตรวจการพยาบาล</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="/_sdk/data_sdk.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+  <script>
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbyJOupuuLL4ntEMR5uqV_8-1TIk0JbRo3rh2cHYEpuR98L-Ne2uV1Aek6aTWlOazOPFug/exec';
+    const SHEET_ID = '1EtLBAA2ALrwBbhYaq-dFAEZ0LAxAb5eCCKktCcid4mo';
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&amp;family=Noto+Sans+Thai:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
+  <script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        ocean: { 50:'#eef6fb', 100:'#d4eaf5', 200:'#a8d5eb', 300:'#6db8dc', 400:'#3a9ac9', 500:'#1a7ab5', 600:'#14608f', 700:'#104a6e', 800:'#0d3a57', 900:'#0a2d44' },
+        coral: { 400:'#f87171', 500:'#ef4444' },
+        mint: { 400:'#34d399', 500:'#10b981' }
+      }
+    }
+  }
+}
+</script>
+  <style>
+  * { font-family: 'Noto Sans Thai', 'Sarabun', sans-serif; }
+  .glass-card { background: rgba(255,255,255,0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.5); }
+  .month-card { transition: all 0.3s cubic-bezier(0.4,0,0.2,1); }
+  .month-card:hover { transform: translateY(-6px) scale(1.03); box-shadow: 0 20px 40px rgba(26,122,181,0.15); }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+  .fade-in { animation: fadeIn 0.4s ease-out forwards; }
+  @keyframes slideUp { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
+  .slide-up { animation: slideUp 0.5s ease-out forwards; }
+  .overlay-bg { background: rgba(10,45,68,0.6); backdrop-filter: blur(6px); }
+  .year-tab { transition: all 0.25s ease; }
+  .year-tab.active { background: linear-gradient(135deg, #1a7ab5, #14608f); color: #fff; box-shadow: 0 4px 16px rgba(26,122,181,0.3); }
+  .btn-primary { background: linear-gradient(135deg, #1a7ab5, #14608f); transition: all 0.25s ease; }
+  .btn-primary:hover { box-shadow: 0 6px 20px rgba(26,122,181,0.35); transform: translateY(-1px); }
+  .badge-year { background: linear-gradient(135deg, #1a7ab5 0%, #3a9ac9 100%); }
+</style>
+  <style>body { box-sizing: border-box; }</style>
+ </head>
+ <body class="h-full">
+  <div id="app" class="h-full w-full overflow-auto" style="background: linear-gradient(160deg, #eef6fb 0%, #d4eaf5 40%, #a8d5eb 100%);"><!-- Header -->
+   <header class="sticky top-0 z-30 glass-card border-b border-ocean-200/50">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+     <div class="flex items-center gap-3">
+      <div class="w-12 h-12 rounded-xl badge-year flex items-center justify-center shadow-lg"><i data-lucide="shield-check" class="text-white" style="width:28px;height:28px;"></i>
+      </div>
+      <div>
+       <h1 id="el-title" class="text-lg font-bold text-ocean-800 leading-tight">ระบบตรวจการพยาบาล</h1>
+       <p id="el-institute" class="text-sm text-ocean-500 font-medium">สถาบันบำราศนราดูร</p>
+      </div>
+     </div><button id="btn-add" class="btn-primary text-white px-5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 shadow-md"> <i data-lucide="plus-circle" style="width:18px;height:18px;"></i> เพิ่มรายการ </button>
+    </div>
+   </header><!-- Year Tabs -->
+   <div class="max-w-6xl mx-auto px-4 pt-5 pb-2">
+    <div id="year-tabs" class="flex gap-2 flex-wrap"></div>
+   </div><!-- Month Grid -->
+   <main class="max-w-6xl mx-auto px-4 pb-8">
+    <div id="month-grid" class="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 mt-4"></div>
+    <div id="empty-state" class="hidden text-center py-20 fade-in">
+     <div class="w-20 h-20 mx-auto rounded-2xl bg-ocean-100 flex items-center justify-center mb-4"><i data-lucide="calendar-x" class="text-ocean-300" style="width:40px;height:40px;"></i>
+     </div>
+     <p class="text-ocean-400 text-lg font-medium">ยังไม่มีรายการ</p>
+     <p class="text-ocean-300 text-sm mt-1">กดปุ่ม "เพิ่มรายการ" เพื่อเริ่มต้น</p>
+    </div>
+   </main><!-- Add Modal -->
+   <div id="modal-add" class="fixed inset-0 z-50 hidden overlay-bg flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md slide-up overflow-hidden">
+     <div class="px-6 py-5 border-b border-ocean-100 flex items-center justify-between">
+      <h2 class="text-lg font-bold text-ocean-800 flex items-center gap-2"><i data-lucide="calendar-plus" class="text-ocean-500" style="width:22px;height:22px;"></i> เพิ่มรายการตรวจ</h2><button id="close-add" class="w-8 h-8 rounded-lg hover:bg-ocean-50 flex items-center justify-center text-ocean-400"> <i data-lucide="x" style="width:20px;height:20px;"></i> </button>
+     </div>
+     <form id="form-add" class="px-6 py-5 space-y-4">
+      <div><label for="input-year" class="block text-sm font-semibold text-ocean-700 mb-1.5">ปี (พ.ศ.)</label>
+       <div class="relative"><select id="input-year" class="w-full border border-ocean-200 rounded-xl px-4 py-3 text-ocean-800 focus:ring-2 focus:ring-ocean-400 focus:border-ocean-400 outline-none appearance-none bg-white font-medium"></select> <i data-lucide="chevron-down" class="absolute right-3 top-3.5 text-ocean-400 pointer-events-none" style="width:18px;height:18px;"></i>
+       </div>
+      </div>
+      <div><label for="input-month" class="block text-sm font-semibold text-ocean-700 mb-1.5">ชื่อเดือน</label> <input id="input-month" type="text" placeholder="เช่น มกราคม, กุมภาพันธ์" class="w-full border border-ocean-200 rounded-xl px-4 py-3 text-ocean-800 focus:ring-2 focus:ring-ocean-400 focus:border-ocean-400 outline-none placeholder-ocean-300 font-medium" required>
+      </div>
+      <div><label for="input-link" class="block text-sm font-semibold text-ocean-700 mb-1.5">ลิงค์</label> <input id="input-link" type="url" placeholder="เช่น https://example.com" class="w-full border border-ocean-200 rounded-xl px-4 py-3 text-ocean-800 focus:ring-2 focus:ring-ocean-400 focus:border-ocean-400 outline-none placeholder-ocean-300 font-medium">
+      </div>
+      <div id="add-error" class="hidden text-coral-500 text-sm font-medium bg-red-50 px-3 py-2 rounded-lg"></div><button type="submit" id="btn-submit-add" class="w-full btn-primary text-white py-3 rounded-xl font-bold text-base flex items-center justify-center gap-2"> <i data-lucide="check-circle" style="width:18px;height:18px;"></i> บันทึกรายการ </button>
+     </form>
+    </div>
+   </div><!-- Delete Modal -->
+   <div id="modal-delete" class="fixed inset-0 z-50 hidden overlay-bg flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm slide-up overflow-hidden">
+     <div class="px-6 py-5 border-b border-ocean-100">
+      <h2 class="text-lg font-bold text-coral-500 flex items-center gap-2"><i data-lucide="trash-2" class="text-coral-500" style="width:22px;height:22px;"></i> ยืนยันการลบ</h2>
+      <p id="delete-info" class="text-sm text-ocean-500 mt-1"></p>
+     </div>
+     <div class="px-6 py-5 space-y-4">
+      <div><label for="input-password" class="block text-sm font-semibold text-ocean-700 mb-1.5">กรุณาใส่รหัสผ่าน</label> <input id="input-password" type="password" placeholder="ใส่รหัสผ่านเพื่อลบ" class="w-full border border-ocean-200 rounded-xl px-4 py-3 text-ocean-800 focus:ring-2 focus:ring-coral-400 focus:border-coral-400 outline-none font-medium">
+      </div>
+      <div id="delete-error" class="hidden text-coral-500 text-sm font-medium bg-red-50 px-3 py-2 rounded-lg"></div>
+      <div class="flex gap-3"><button id="btn-cancel-delete" class="flex-1 py-3 rounded-xl border border-ocean-200 text-ocean-600 font-semibold hover:bg-ocean-50 transition">ยกเลิก</button> <button id="btn-confirm-delete" class="flex-1 py-3 rounded-xl bg-gradient-to-r from-coral-500 to-coral-400 text-white font-bold shadow-md hover:shadow-lg transition flex items-center justify-center gap-2"> <i data-lucide="trash-2" style="width:16px;height:16px;"></i> ลบรายการ </button>
+      </div>
+     </div>
+    </div>
+   </div><!-- Edit Modal -->
+   <div id="modal-edit" class="fixed inset-0 z-50 hidden overlay-bg flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md slide-up overflow-hidden">
+     <div class="px-6 py-5 border-b border-ocean-100 flex items-center justify-between">
+      <h2 class="text-lg font-bold text-ocean-800 flex items-center gap-2"><i data-lucide="edit-3" class="text-ocean-500" style="width:22px;height:22px;"></i> แก้ไขรายการ</h2><button id="close-edit" class="w-8 h-8 rounded-lg hover:bg-ocean-50 flex items-center justify-center text-ocean-400"> <i data-lucide="x" style="width:20px;height:20px;"></i> </button>
+     </div>
+     <form id="form-edit" class="px-6 py-5 space-y-4">
+      <div><label for="edit-year" class="block text-sm font-semibold text-ocean-700 mb-1.5">ปี (พ.ศ.)</label>
+       <div class="relative"><select id="edit-year" class="w-full border border-ocean-200 rounded-xl px-4 py-3 text-ocean-800 focus:ring-2 focus:ring-ocean-400 focus:border-ocean-400 outline-none appearance-none bg-white font-medium"></select> <i data-lucide="chevron-down" class="absolute right-3 top-3.5 text-ocean-400 pointer-events-none" style="width:18px;height:18px;"></i>
+       </div>
+      </div>
+      <div><label for="edit-month" class="block text-sm font-semibold text-ocean-700 mb-1.5">ชื่อเดือน</label> <input id="edit-month" type="text" placeholder="เช่น มกราคม, กุมภาพันธ์" class="w-full border border-ocean-200 rounded-xl px-4 py-3 text-ocean-800 focus:ring-2 focus:ring-ocean-400 focus:border-ocean-400 outline-none placeholder-ocean-300 font-medium" required>
+      </div>
+      <div><label for="edit-link" class="block text-sm font-semibold text-ocean-700 mb-1.5">ลิงค์</label> <input id="edit-link" type="url" placeholder="เช่น https://example.com" class="w-full border border-ocean-200 rounded-xl px-4 py-3 text-ocean-800 focus:ring-2 focus:ring-ocean-400 focus:border-ocean-400 outline-none placeholder-ocean-300 font-medium">
+      </div>
+      <div id="edit-error" class="hidden text-coral-500 text-sm font-medium bg-red-50 px-3 py-2 rounded-lg"></div><button type="submit" id="btn-submit-edit" class="w-full btn-primary text-white py-3 rounded-xl font-bold text-base flex items-center justify-center gap-2"> <i data-lucide="save" style="width:18px;height:18px;"></i> บันทึกการแก้ไข </button>
+     </form>
+    </div>
+   </div><!-- Toast -->
+   <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 hidden">
+    <div class="px-5 py-3 rounded-xl shadow-xl text-white font-semibold text-sm flex items-center gap-2"></div>
+   </div>
+  </div>
+  <script>
+const MONTH_ICONS = {
+  'มกราคม':'snowflake','กุมภาพันธ์':'heart','มีนาคม':'flower-2','เมษายน':'droplets',
+  'พฤษภาคม':'sun','มิถุนายน':'cloud-rain','กรกฎาคม':'cloud-sun','สิงหาคม':'crown',
+  'กันยายน':'leaf','ตุลาคม':'umbrella','พฤศจิกายน':'wind','ธันวาคม':'gift'
+};
+
+let allData = [];
+let selectedYear = null;
+let deleteTarget = null;
+
+const defaultConfig = {
+  main_title: 'ระบบตรวจการพยาบาล',
+  institute_name: 'สถาบันบำราศนราดูร',
+  background_color: '#eef6fb',
+  surface_color: '#ffffff',
+  text_color: '#0a2d44',
+  primary_color: '#1a7ab5',
+  secondary_color: '#3a9ac9',
+  font_family: 'Noto Sans Thai',
+  font_size: 16
+};
+
+// Element SDK
+window.elementSdk.init({
+  defaultConfig,
+  onConfigChange: async (config) => {
+    const t = config.main_title || defaultConfig.main_title;
+    const i = config.institute_name || defaultConfig.institute_name;
+    document.getElementById('el-title').textContent = t;
+    document.getElementById('el-institute').textContent = i;
+
+    const bg = config.background_color || defaultConfig.background_color;
+    const sf = config.surface_color || defaultConfig.surface_color;
+    const tx = config.text_color || defaultConfig.text_color;
+    const pr = config.primary_color || defaultConfig.primary_color;
+    const sc = config.secondary_color || defaultConfig.secondary_color;
+    const ff = config.font_family || defaultConfig.font_family;
+    const fs = config.font_size || defaultConfig.font_size;
+
+    document.body.style.fontFamily = `${ff}, Sarabun, sans-serif`;
+    document.getElementById('app').style.background = `linear-gradient(160deg, ${bg} 0%, ${sc}33 100%)`;
+
+    document.querySelectorAll('.glass-card').forEach(el => { el.style.backgroundColor = `${sf}dd`; });
+    document.getElementById('el-title').style.color = tx;
+    document.getElementById('el-title').style.fontSize = `${fs * 1.125}px`;
+    document.getElementById('el-institute').style.fontSize = `${fs * 0.875}px`;
+  },
+  mapToCapabilities: (config) => ({
+    recolorables: [
+      { get: () => config.background_color || defaultConfig.background_color, set: v => { config.background_color = v; window.elementSdk.setConfig({background_color:v}); }},
+      { get: () => config.surface_color || defaultConfig.surface_color, set: v => { config.surface_color = v; window.elementSdk.setConfig({surface_color:v}); }},
+      { get: () => config.text_color || defaultConfig.text_color, set: v => { config.text_color = v; window.elementSdk.setConfig({text_color:v}); }},
+      { get: () => config.primary_color || defaultConfig.primary_color, set: v => { config.primary_color = v; window.elementSdk.setConfig({primary_color:v}); }},
+      { get: () => config.secondary_color || defaultConfig.secondary_color, set: v => { config.secondary_color = v; window.elementSdk.setConfig({secondary_color:v}); }}
+    ],
+    borderables: [],
+    fontEditable: { get: () => config.font_family || defaultConfig.font_family, set: v => { config.font_family = v; window.elementSdk.setConfig({font_family:v}); }},
+    fontSizeable: { get: () => config.font_size || defaultConfig.font_size, set: v => { config.font_size = v; window.elementSdk.setConfig({font_size:v}); }}
+  }),
+  mapToEditPanelValues: (config) => new Map([
+    ['main_title', config.main_title || defaultConfig.main_title],
+    ['institute_name', config.institute_name || defaultConfig.institute_name]
+  ])
+});
+
+// Populate year select
+const yearSelect = document.getElementById('input-year');
+const editYearSelect = document.getElementById('edit-year');
+const currentBE = new Date().getFullYear() + 543;
+for (let y = currentBE - 2; y <= currentBE + 3; y++) {
+  const opt = document.createElement('option');
+  opt.value = y; opt.textContent = y;
+  if (y === currentBE) opt.selected = true;
+  yearSelect.appendChild(opt);
+  
+  const opt2 = opt.cloneNode(true);
+  editYearSelect.appendChild(opt2);
+}
+
+// Sync with Google Apps Script
+async function syncDataWithGAS() {
+  try {
+    const response = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'read' })
+    });
+    const result = await response.json();
+    if (result.success && result.data && Array.isArray(result.data)) {
+      allData = result.data.map((row, idx) => ({
+        __backendId: `gas-${idx}`,
+        type: 'inspection',
+        year: row[0] ? String(row[0]) : '',
+        month_name: row[1] || '',
+        link: row[2] || '',
+        created_at: new Date().toISOString()
+      }));
+      renderYearTabs();
+      renderGrid();
+      showToast('ดึงข้อมูลสำเร็จ', 'success');
+    }
+  } catch (err) {
+    console.error('Sync failed:', err);
+    showToast('ไม่สามารถซิงค์ข้อมูลได้', 'error');
+  }
+}
+
+// Add to Google Apps Script
+async function addToGAS(year, monthName, link) {
+  try {
+    const payload = {
+      action: 'add',
+      year: String(year),
+      month: monthName,
+      link: link
+    };
+    
+    const response = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+    
+    const responseText = await response.text();
+    const result = JSON.parse(responseText);
+    
+    if (result.success) {
+      // Wait 1.5 seconds for GAS to update sheet, then sync
+      await new Promise(r => setTimeout(r, 1500));
+      await syncDataWithGAS();
+      return true;
+    }
+    return false;
+  } catch (err) {
+    console.error('Add failed:', err);
+    return false;
+  }
+}
+
+// Delete from Google Apps Script
+async function deleteFromGAS(monthName, year) {
+  try {
+    const payload = {
+      action: 'delete',
+      month: monthName,
+      year: String(year)
+    };
+    
+    const response = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+    
+    const responseText = await response.text();
+    const result = JSON.parse(responseText);
+    
+    if (result.success) {
+      // Wait 1.5 seconds for GAS to update sheet, then sync
+      await new Promise(r => setTimeout(r, 1500));
+      await syncDataWithGAS();
+      return true;
+    }
+    return false;
+  } catch (err) {
+    console.error('Delete failed:', err);
+    return false;
+  }
+}
+
+// Update in Google Apps Script
+async function updateToGAS(oldMonth, oldYear, newYear, newMonth, newLink) {
+  try {
+    const payload = {
+      action: 'update',
+      oldMonth: oldMonth,
+      oldYear: String(oldYear),
+      year: String(newYear),
+      month: newMonth,
+      link: newLink
+    };
+    
+    const response = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+    
+    const responseText = await response.text();
+    const result = JSON.parse(responseText);
+    
+    if (result.success) {
+      // Wait 1.5 seconds for GAS to update sheet, then sync
+      await new Promise(r => setTimeout(r, 1500));
+      await syncDataWithGAS();
+      return true;
+    }
+    return false;
+  } catch (err) {
+    console.error('Update failed:', err);
+    return false;
+  }
+}
+
+// Data SDK
+const dataHandler = {
+  onDataChanged(data) {
+    allData = data;
+    renderYearTabs();
+    renderGrid();
+  }
+};
+
+// Initialize app - prioritize Google Apps Script
+(async () => {
+  console.log('🔄 Initializing app...');
+  
+  // Test GAS connection first
+  const gasConnected = await testGASConnection();
+  
+  if (gasConnected) {
+    console.log('✓ Google Apps Script connected successfully');
+    showToast('เชื่อมต่อ Google Apps Script สำเร็จ', 'success');
+    await syncDataWithGAS();
+  } else {
+    console.error('✗ Google Apps Script connection failed');
+    showToast('⚠️ ไม่สามารถเชื่อมต่อ Google Apps Script - ตรวจสอบ URL', 'error');
+    Swal.fire({
+      icon: 'error',
+      title: 'ไม่สามารถเชื่อมต่อ',
+      text: 'ไม่พบการเชื่อมต่อ Google Apps Script\n\nโปรดตรวจสอบ:\n1. URL ของ Google Apps Script\n2. Google Apps Script ได้เผยแพร่แล้ว\n3. ฟังก์ชัน doPost() มีอยู่ในโค้ด',
+      confirmButtonText: 'ตกลง',
+      confirmButtonColor: '#1a7ab5',
+      allowOutsideClick: false
+    });
+  }
+})();
+
+function getYears() {
+  const s = new Set(allData.map(d => d.year));
+  return [...s].sort((a,b) => Number(b) - Number(a));
+}
+
+function renderYearTabs() {
+  const container = document.getElementById('year-tabs');
+  const years = getYears();
+  if (!years.length) { container.innerHTML = ''; return; }
+  if (!selectedYear || !years.includes(selectedYear)) selectedYear = years[0];
+
+  const existing = new Map([...container.children].map(el => [el.dataset.year, el]));
+  const toKeep = new Set();
+
+  // "all" tab
+  toKeep.add('all');
+  if (!existing.has('all')) {
+    const btn = document.createElement('button');
+    btn.dataset.year = 'all';
+    btn.className = `year-tab px-4 py-2 rounded-xl text-sm font-semibold ${!selectedYear ? 'active' : 'bg-white/70 text-ocean-600 hover:bg-white'}`;
+    btn.textContent = 'ทั้งหมด';
+    btn.onclick = () => { selectedYear = null; renderYearTabs(); renderGrid(); };
+    container.prepend(btn);
+  } else {
+    const btn = existing.get('all');
+    btn.className = `year-tab px-4 py-2 rounded-xl text-sm font-semibold ${!selectedYear ? 'active' : 'bg-white/70 text-ocean-600 hover:bg-white'}`;
+  }
+
+  years.forEach(y => {
+    toKeep.add(y);
+    if (!existing.has(y)) {
+      const btn = document.createElement('button');
+      btn.dataset.year = y;
+      btn.className = `year-tab px-4 py-2 rounded-xl text-sm font-semibold ${selectedYear === y ? 'active' : 'bg-white/70 text-ocean-600 hover:bg-white'}`;
+      btn.innerHTML = `<span class="flex items-center gap-1.5"><i data-lucide="calendar" style="width:14px;height:14px;"></i>${y}</span>`;
+      btn.onclick = () => { selectedYear = y; renderYearTabs(); renderGrid(); };
+      container.appendChild(btn);
+    } else {
+      const btn = existing.get(y);
+      btn.className = `year-tab px-4 py-2 rounded-xl text-sm font-semibold ${selectedYear === y ? 'active' : 'bg-white/70 text-ocean-600 hover:bg-white'}`;
+    }
+  });
+
+  existing.forEach((el, key) => { if (!toKeep.has(key)) el.remove(); });
+  lucide.createIcons();
+}
+
+function renderGrid() {
+  const grid = document.getElementById('month-grid');
+  const empty = document.getElementById('empty-state');
+  let filtered = selectedYear ? allData.filter(d => d.year === selectedYear) : [...allData];
+  filtered.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+
+  if (!filtered.length) {
+    grid.innerHTML = '';
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+
+  const existingCards = new Map([...grid.children].map(el => [el.dataset.id, el]));
+  const toKeep = new Set();
+
+  filtered.forEach((item, idx) => {
+    const id = item.__backendId;
+    toKeep.add(id);
+    const iconName = MONTH_ICONS[item.month_name] || 'calendar';
+
+    if (existingCards.has(id)) {
+      const card = existingCards.get(id);
+      card.querySelector('.card-month').textContent = item.month_name;
+      card.querySelector('.card-year').textContent = `พ.ศ. ${item.year}`;
+    } else {
+      const card = document.createElement('div');
+      card.dataset.id = id;
+      card.className = 'month-card glass-card rounded-2xl p-5 cursor-default fade-in relative group';
+      card.style.animationDelay = `${idx * 0.05}s`;
+      card.style.opacity = '0';
+      
+      const cardContent = document.createElement('div');
+      cardContent.className = item.link ? 'cursor-pointer' : '';
+      cardContent.innerHTML = `
+        <div class="w-14 h-14 rounded-xl badge-year flex items-center justify-center mb-3 shadow-md">
+          <i data-lucide="${iconName}" class="text-white" style="width:28px;height:28px;"></i>
+        </div>
+        <p class="card-month text-base font-bold text-ocean-800">${item.month_name}</p>
+        <p class="card-year text-xs text-ocean-400 font-medium mt-0.5">พ.ศ. ${item.year}</p>
+        <div class="mt-3 flex items-center gap-1.5 text-mint-500">
+          <i data-lucide="check-circle-2" style="width:14px;height:14px;"></i>
+          <span class="text-xs font-semibold">บันทึกแล้ว</span>
+        </div>
+      `;
+      
+      if (item.link) {
+        cardContent.style.cursor = 'pointer';
+        cardContent.onclick = () => window.open(item.link, '_blank');
+      }
+      
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'delete-btn absolute top-3 right-3 w-8 h-8 rounded-lg bg-coral-500/0 group-hover:bg-coral-500/10 flex items-center justify-center text-ocean-300 group-hover:text-coral-500 transition-all';
+      deleteBtn.title = 'ลบ';
+      deleteBtn.innerHTML = '<i data-lucide="trash-2" style="width:16px;height:16px;"></i>';
+      deleteBtn.onclick = (e) => {
+        e.stopPropagation();
+        openDeleteModal(item);
+      };
+      
+      const editBtn = document.createElement('button');
+      editBtn.className = 'edit-btn absolute top-3 right-12 w-8 h-8 rounded-lg bg-ocean-500/0 group-hover:bg-ocean-500/10 flex items-center justify-center text-ocean-300 group-hover:text-ocean-600 transition-all';
+      editBtn.title = 'แก้ไข';
+      editBtn.innerHTML = '<i data-lucide="edit-3" style="width:16px;height:16px;"></i>';
+      editBtn.onclick = (e) => {
+        e.stopPropagation();
+        openEditModal(item);
+      };
+      
+      card.appendChild(cardContent);
+      card.appendChild(editBtn);
+      card.appendChild(deleteBtn);
+      grid.appendChild(card);
+    }
+  });
+
+  existingCards.forEach((el, key) => { if (!toKeep.has(key)) el.remove(); });
+  lucide.createIcons();
+}
+
+// Add modal
+document.getElementById('btn-add').onclick = () => {
+  document.getElementById('modal-add').classList.remove('hidden');
+  document.getElementById('input-month').value = '';
+  document.getElementById('input-link').value = '';
+  document.getElementById('add-error').classList.add('hidden');
+};
+document.getElementById('close-add').onclick = () => document.getElementById('modal-add').classList.add('hidden');
+document.getElementById('modal-add').onclick = (e) => { if (e.target === e.currentTarget) e.currentTarget.classList.add('hidden'); };
+
+document.getElementById('form-add').onsubmit = async (e) => {
+  e.preventDefault();
+  const year = document.getElementById('input-year').value;
+  const month = document.getElementById('input-month').value.trim();
+  const link = document.getElementById('input-link').value.trim();
+  const errEl = document.getElementById('add-error');
+
+  if (!month) { errEl.textContent = 'กรุณาใส่ชื่อเดือน'; errEl.classList.remove('hidden'); return; }
+  if (allData.length >= 999) { errEl.textContent = 'ถึงจำนวนสูงสุดแล้ว (999 รายการ)'; errEl.classList.remove('hidden'); return; }
+  
+  // Check for duplicates from allData (client-side validation first)
+  const isDuplicate = allData.some(d => d.year === year && d.month_name === month);
+  if (isDuplicate) { 
+    errEl.textContent = `❌ มีเดือนนี้แล้ว (พ.ศ. ${year} ${month})`; 
+    errEl.classList.remove('hidden'); 
+    return; 
+  }
+  
+  // Additional server-side check via Google Apps Script
+  try {
+    const checkResponse = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'checkDuplicate', year: String(year), month: month })
+    });
+    
+    const checkText = await checkResponse.text();
+    const checkResult = JSON.parse(checkText);
+    
+    if (checkResult.exists) {
+      errEl.textContent = `❌ มีเดือนนี้แล้ว (พ.ศ. ${year} ${month})`;
+      errEl.classList.remove('hidden');
+      return;
+    }
+  } catch (err) {
+    console.warn('Could not verify on server, proceeding with client check:', err);
+  }
+
+  const btn = document.getElementById('btn-submit-add');
+  btn.disabled = true; 
+  btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin" style="width:18px;height:18px;"></i> กำลังบันทึก...';
+  lucide.createIcons();
+
+  let success = false;
+  try {
+    success = await addToGAS(year, month, link);
+  } catch (err) {
+    console.error('Add operation failed:', err);
+  }
+
+  btn.disabled = false; 
+  btn.innerHTML = '<i data-lucide="check-circle" style="width:18px;height:18px;"></i> บันทึกรายการ';
+  lucide.createIcons();
+
+  if (success) {
+    document.getElementById('modal-add').classList.add('hidden');
+    selectedYear = year;
+    Swal.fire({
+      icon: 'success',
+      title: 'สำเร็จ!',
+      text: 'บันทึกข้อมูลสำเร็จแล้ว',
+      confirmButtonText: 'ตกลง',
+      confirmButtonColor: '#1a7ab5'
+    });
+  } else {
+    errEl.textContent = 'เกิดข้อผิดพลาด กรุณาลองใหม่'; 
+    errEl.classList.remove('hidden');
+  }
+};
+
+// Edit modal
+let editTarget = null;
+function openEditModal(item) {
+  editTarget = item;
+  document.getElementById('edit-year').value = item.year;
+  document.getElementById('edit-month').value = item.month_name;
+  document.getElementById('edit-link').value = item.link || '';
+  document.getElementById('edit-error').classList.add('hidden');
+  document.getElementById('modal-edit').classList.remove('hidden');
+  lucide.createIcons();
+}
+document.getElementById('close-edit').onclick = () => document.getElementById('modal-edit').classList.add('hidden');
+document.getElementById('modal-edit').onclick = (e) => { if (e.target === e.currentTarget) e.currentTarget.classList.add('hidden'); };
+
+document.getElementById('form-edit').onsubmit = async (e) => {
+  e.preventDefault();
+  const newYear = document.getElementById('edit-year').value;
+  const newMonth = document.getElementById('edit-month').value.trim();
+  const newLink = document.getElementById('edit-link').value.trim();
+  const errEl = document.getElementById('edit-error');
+
+  if (!newMonth) { errEl.textContent = 'กรุณาใส่ชื่อเดือน'; errEl.classList.remove('hidden'); return; }
+  if (!editTarget) return;
+
+  const btn = document.getElementById('btn-submit-edit');
+  btn.disabled = true; 
+  btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin" style="width:18px;height:18px;"></i> กำลังบันทึก...';
+  lucide.createIcons();
+
+  let success = false;
+  try {
+    success = await updateToGAS(editTarget.month_name, editTarget.year, newYear, newMonth, newLink);
+  } catch (err) {
+    console.error('Update operation failed:', err);
+  }
+
+  btn.disabled = false; 
+  btn.innerHTML = '<i data-lucide="save" style="width:18px;height:18px;"></i> บันทึกการแก้ไข';
+  lucide.createIcons();
+
+  if (success) {
+    document.getElementById('modal-edit').classList.add('hidden');
+    editTarget = null;
+    Swal.fire({
+      icon: 'success',
+      title: 'สำเร็จ!',
+      text: 'แก้ไขข้อมูลสำเร็จแล้ว',
+      confirmButtonText: 'ตกลง',
+      confirmButtonColor: '#1a7ab5'
+    });
+  } else {
+    errEl.textContent = 'เกิดข้อผิดพลาด กรุณาลองใหม่'; 
+    errEl.classList.remove('hidden');
+  }
+};
+
+// Delete modal
+function openDeleteModal(item) {
+  deleteTarget = item;
+  document.getElementById('delete-info').textContent = `ลบรายการ: ${item.month_name} พ.ศ. ${item.year}`;
+  document.getElementById('input-password').value = '';
+  document.getElementById('delete-error').classList.add('hidden');
+  document.getElementById('modal-delete').classList.remove('hidden');
+}
+document.getElementById('btn-cancel-delete').onclick = () => document.getElementById('modal-delete').classList.add('hidden');
+document.getElementById('modal-delete').onclick = (e) => { if (e.target === e.currentTarget) e.currentTarget.classList.add('hidden'); };
+
+document.getElementById('btn-confirm-delete').onclick = async () => {
+  const pw = document.getElementById('input-password').value;
+  const errEl = document.getElementById('delete-error');
+  if (pw !== '1234') { errEl.textContent = 'รหัสผ่านไม่ถูกต้อง'; errEl.classList.remove('hidden'); return; }
+  if (!deleteTarget) return;
+
+  const btn = document.getElementById('btn-confirm-delete');
+  btn.disabled = true; 
+  btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin" style="width:16px;height:16px;"></i> กำลังลบ...';
+  lucide.createIcons();
+
+  let success = false;
+  try {
+    success = await deleteFromGAS(deleteTarget.month_name, deleteTarget.year);
+  } catch (err) {
+    console.error('Delete operation failed:', err);
+  }
+
+  btn.disabled = false; 
+  btn.innerHTML = '<i data-lucide="trash-2" style="width:16px;height:16px;"></i> ลบรายการ';
+  lucide.createIcons();
+
+  if (success) {
+    document.getElementById('modal-delete').classList.add('hidden');
+    deleteTarget = null;
+    Swal.fire({
+      icon: 'success',
+      title: 'สำเร็จ!',
+      text: 'ลบข้อมูลสำเร็จแล้ว',
+      confirmButtonText: 'ตกลง',
+      confirmButtonColor: '#1a7ab5'
+    });
+  } else {
+    errEl.textContent = 'เกิดข้อผิดพลาด กรุณาลองใหม่'; 
+    errEl.classList.remove('hidden');
+  }
+};
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  const inner = t.querySelector('div');
+  inner.className = `px-5 py-3 rounded-xl shadow-xl text-white font-semibold text-sm flex items-center gap-2 ${type === 'success' ? 'bg-gradient-to-r from-mint-500 to-mint-400' : 'bg-gradient-to-r from-coral-500 to-coral-400'}`;
+  const icon = type === 'success' ? 'check-circle-2' : 'alert-circle';
+  inner.innerHTML = `<i data-lucide="${icon}" style="width:18px;height:18px;"></i>${msg}`;
+  t.classList.remove('hidden');
+  lucide.createIcons();
+  setTimeout(() => t.classList.add('hidden'), 2500);
+}
+
+// Test connection to GAS before starting
+async function testGASConnection() {
+  try {
+    const testResponse = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'test' }),
+      signal: AbortSignal.timeout(5000)
+    });
+    
+    if (!testResponse.ok) throw new Error('HTTP error');
+    const testText = await testResponse.text();
+    const testData = JSON.parse(testText);
+    return testData && testData.success === true;
+  } catch (err) {
+    console.error('GAS connection test failed:', err);
+    return false;
+  }
+}
+
+lucide.createIcons();
+</script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9e9756b7431cd036',t:'MTc3NTcxNDkyMi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
