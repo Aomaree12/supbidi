@@ -7,8 +7,6 @@
   <title>ระบบตรวจการพยาบาล</title>
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
-  <script src="/codelet/eyJhbGciOiJIUzI1NiJ9.eyJjIjoiYzV5cTYxdHlwZXJhcjFobSIsImV4cCI6MTc3NTgwMjg1OSwiZGVwIjoiQVNTSVNUQU5UX1RIUkVBRF9DT0RFTEVUI2ExZWMyZGY3LTRlMWYtNDk0Yy1iMmI2LTI3YzdkN2Y1MGNiMiJ9.Gn-NQmM4UEn1cbmxKWALWz5If4DTcoMqLTmYOi-d87o/element_sdk.js?pin_id=20e3d31b047e3e3aa3e98b2be2a7ee39"></script>
-  <script src="/codelet/eyJhbGciOiJIUzI1NiJ9.eyJjIjoiYzV5cTYxdHlwZXJhcjFobSIsImV4cCI6MTc3NTgwMjg1OSwiZGVwIjoiQVNTSVNUQU5UX1RIUkVBRF9DT0RFTEVUI2ExZWMyZGY3LTRlMWYtNDk0Yy1iMmI2LTI3YzdkN2Y1MGNiMiJ9.Gn-NQmM4UEn1cbmxKWALWz5If4DTcoMqLTmYOi-d87o/data_sdk.js?pin_id=20e3d31b047e3e3aa3e98b2be2a7ee39"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
   <script>
@@ -30,6 +28,21 @@ tailwind.config = {
 }
 </script>
   <style>
+   /* บังคับสีพื้นหลังและฟอนต์ให้ทำงานแน่นอน */
+  body { 
+    box-sizing: border-box; 
+    font-family: 'Noto Sans Thai', 'Sarabun', sans-serif !important;
+  }
+  
+  #app {
+    /* ใช้สีที่คุณเลือกไว้ใน Canva มาใส่เป็นพื้นหลังตรงนี้เลย */
+    background: linear-gradient(160deg, #eef6fb 0%, #d4eaf5 40%, #a8d5eb 100%) !important;
+  }
+
+  /* ตั้งค่าสีปุ่มให้คงที่ */
+  .btn-primary { 
+    background: linear-gradient(135deg, #1a7ab5, #14608f) !important; 
+  }
   * { font-family: 'Noto Sans Thai', 'Sarabun', sans-serif; }
   .glass-card { background: rgba(255,255,255,0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.5); }
   .month-card { transition: all 0.3s cubic-bezier(0.4,0,0.2,1); }
